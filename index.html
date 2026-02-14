@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mini Mario PRO</title>
+<style>
+body{
+margin:0;
+overflow:hidden;
+font-family:Arial;
+background:linear-gradient(#5c94fc,#87ceeb);
+}
+
+#startScreen{
+position:absolute;
+width:100%;
+height:100%;
+background:#000a;
+color:white;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:10;
+}
+
+#game{
+width:100vw;
+height:100vh;
+position:relative;
+display:none;
+overflow:hidden;
+}
+
+#world{
+width:3000px;
+height:100%;
+position:absolute;
+}
+
+#player{
+width:40px;
+height:50px;
+background:red;
+position:absolute;
+border-radius:5px;
+transition:transform 0.1s;
+}
+
+.platform{
+width:100px;
+height:20px;
+background:#8B4513;
+position:absolute;
+}
+
+.enemy{
+width:40px;
+height:40px;
+background:black;
+position:absolute;
+border-radius:50%;
+}
+
+.coin{
+width:20px;
+height:20px;
+background:gold;
+position:absolute;
+border-radius:50%;
+animation:spin 1s infinite linear;
+}
+
+@keyframes spin{
+0%{transform:rotateY(0deg);}
+100%{transform:rotateY(360deg);}
+}
+
+#goal{
+width:30px;
+height:80px;
+background:green;
+position:absolute;
+}
+
+#ground{
+width:3000px;
+height:40px;
+background:green;
+position:absolute;
+bottom:0;
+}
+
+#ui{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+z-index:5;
+}
+
+.controls{
+position:absolute;
+bottom:20px;
+width:100%;
+text-align:center;
+}
+
+button{
+width:70px;
+height:70px;
+font-size:25px;
+margin:10px;
+border-radius:50%;
+border:none;
+}
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+<h1>Mini Mario PRO</h1>
+<button onclick="startGame()">Iniciar</button>
+</div>
+
+<div id="game">
+<div id="ui">
+Nivel: <span id="level">1</span> |
+❤️ <span id="lives">3</span> |
+🪙 <span id="coins">0</span>
+</div>
+
+<div id="world">
+
+<div id="player"></div>
+
+<div class="platform" style="left:400px; bottom:120px;"></div>
+<div class="platform" style="left:800px; bottom:180px;"></div>
+
+<div class="enemy" style="left:600px; bottom:40px;"></div>
+
+<div class="coin" style="left:420px; bottom:150px;"></div>
+<div class="coin" style="left:820px; bottom:210px;"></div>
+
+<div id="goal" style="left:2500px; bottom:40px;"></div>
+
+<div id="ground"></div>
+
+</div>
+
+<div class="controls">
+<button id="left">⬅️</button>
+<button id="jump">⬆️</button>
+<button id="right">➡️</button>
+</div>
+
+</div>
+
+<script>
+let player=document.getElementById("player");
+let world=document.getElementById("world");
+let x=50,y=40;
+let velY=0;
+let gravity=0.8;
+let jumping=false;
+let lives=3;
+let coins=0;
+let level=1;
+
+function startGame(){
+document.getElementById("startScreen").style.display="none";
+document.getElementById("game").style.display="block";
+loop();
+}
+
+function beep(freq){
+let ctx=new (window.AudioContext||window.webkitAudioContext)();
+let osc=ctx.createOscillator();
+osc.frequency.value=freq;
+osc.connect(ctx.destination);
+osc.start();
+setTimeout(()=>{osc.stop();ctx.close();},100);
+}
+
+function loop(){
+
+velY-=gravity;
+y+=velY;
+
+if(y<=40){y=40;velY=0;jumping=false;}
+
+document.querySelectorAll(".enemy").forEach(e=>{
+let ex=e.offsetLeft;
+ex+=2*Math.sin(Date.now()/500);
+e.style.left=ex+"px";
+
+if(x+40>e.offsetLeft && x<e.offsetLeft+40 &&
+y<e.offsetTop+40 && y+50>e.offsetTop){
+lives--;
+document.getElementById("lives").textContent=lives;
+beep(200);
+x=50;y=40;
+if(lives<=0){alert("Game Over");location.reload();}
+}
+});
+
+document.querySelectorAll(".coin").forEach(c=>{
+if(x+40>c.offsetLeft && x<c.offsetLeft+20 &&
+y<c.offsetTop+20 && y+50>c.offsetTop){
+coins++;
+document.getElementById("coins").textContent=coins;
+beep(600);
+c.remove();
+}
+});
+
+let goal=document.getElementById("goal");
+if(x+40>goal.offsetLeft){
+level++;
+document.getElementById("level").textContent=level;
+alert("Nivel "+level);
+x=50;
+}
+
+if(x>200){
+world.style.left=-(x-200)+"px";
+}
+
+player.style.left=x+"px";
+player.style.bottom=y+"px";
+
+requestAnimationFrame(loop);
+}
+
+document.getElementById("left").ontouchstart=()=>x-=20;
+document.getElementById("right").ontouchstart=()=>x+=20;
+document.getElementById("jump").ontouchstart=()=>{
+if(!jumping){velY=15;jumping=true;beep(400);}
+};
+</script>
+
+</body>
+</html>
